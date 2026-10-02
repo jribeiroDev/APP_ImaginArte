@@ -1,0 +1,44 @@
+# Dependências
+node_modules/
+
+# Builds e cache Next.js
+.next/
+out/
+build/
+.vercel/
+
+# Variáveis de ambiente e segredos
+.env
+.env.*
+!.env.example
+
+# Logs e ficheiros temporários
+*.log
+logs/
+*.tmp
+*.temp
+
+# TypeScript
+*.tsbuildinfo
+
+# Coverage e testes
+coverage/
+.nyc_output/
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Editores e IDEs
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.example.json
+.idea/
+*.swp
+*.swo
+
+# Ficheiros locais da aplicação
+.local/
+tmp/
+temp/

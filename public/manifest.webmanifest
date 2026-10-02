@@ -1,0 +1,11 @@
+{
+  "name": "Imaginarte Gestão de Encomendas",
+  "short_name": "Imaginarte",
+  "description": "Gestão pessoal de encomendas",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f9f7f3",
+  "theme_color": "#286957",
+  "lang": "pt-PT",
+  "icons": []
+}
