@@ -3,12 +3,14 @@ import { asc, desc, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { customers, orderItems, orders, products } from "@/lib/db/schema";
 import { customers as demoCustomers, orders as demoOrders, products as demoProducts } from "@/lib/demo-data";
+import { getCurrentUser } from "@/lib/auth";
 
 export const runtime = "nodejs";
 
 const formatDate = (value: Date | null, fallback = "") => value ? new Intl.DateTimeFormat("pt-PT", { day: "2-digit", month: "short" }).format(value).replace(" de ", " ") : fallback;
 
 export async function GET() {
+  if (!await getCurrentUser()) return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
   if (!db) {
     if (process.env.NODE_ENV !== "production") {
       return NextResponse.json({ source: "demo", customers: demoCustomers, products: demoProducts, orders: demoOrders });
@@ -48,6 +50,7 @@ export async function GET() {
 }
 
 export async function PATCH(request: Request) {
+  if (!await getCurrentUser()) return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
   if (!db) return NextResponse.json({ error: "DATABASE_URL não está configurada." }, { status: 500 });
   try {
     const body = await request.json() as { orderNumber?: string; status?: "new" | "production" | "ready" | "shipped" | "delivered" | "cancelled" };

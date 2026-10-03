@@ -77,6 +77,18 @@ Substitui `UTILIZADOR/REPOSITORIO` pelos dados reais do repositório.
 3. Confirma em **Settings → Environment Variables** que `DATABASE_URL` está definido e que não contém aspas adicionais.
 4. Sempre que alterares variáveis de ambiente, faz um novo redeploy em **Deployments → Redeploy**.
 
+## Login seguro
+
+O login usa exclusivamente a tabela `users` do Neon. A palavra-passe deve estar guardada em `password_hash` como hash bcrypt (normalmente começa por `$2a$`, `$2b$` ou `$2y$`), nunca em texto simples.
+
+Podes confirmar apenas os utilizadores existentes, sem mostrar palavras-passe:
+
+```sql
+SELECT id, email, created_at FROM users ORDER BY created_at DESC;
+```
+
+Após um login válido, a aplicação cria uma sessão aleatória na tabela `sessions` e envia apenas um cookie `httpOnly`, `secure` em produção e `sameSite=lax` para o browser. O endpoint dos dados também exige essa sessão.
+
 ## Atualizações futuras da base de dados
 
 Para alterações pequenas e controladas, cria uma nova migração Drizzle:

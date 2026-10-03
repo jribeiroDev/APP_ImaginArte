@@ -7,5 +7,18 @@
   "background_color": "#f9f7f3",
   "theme_color": "#286957",
   "lang": "pt-PT",
-  "icons": []
+  "icons": [
+    {
+      "src": "/logo_mini.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/logo_mini.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
 }
