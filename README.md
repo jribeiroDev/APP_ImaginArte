@@ -13,13 +13,10 @@ The interface currently runs with local demo data so it can be reviewed without 
 
 The current login screen validates email and password locally and stores a browser session so the prototype can be used privately during development. For production, this gate should be connected to the Neon `users` and `sessions` tables already defined in `src/lib/db/schema.ts`.
 
-## Neon setup
+## Neon and Vercel
 
-1. Create a Neon PostgreSQL project.
-2. Copy the pooled connection string into `DATABASE_URL`.
-3. Configure the endpoint with Scale to Zero disabled if the database must remain active when idle.
-4. Run `npm run db:generate` and `npm run db:migrate`.
-5. Add the same variables to the Vercel project.
+The complete Portuguese deployment guide is in [`DEPLOY_VERCEL.md`](./DEPLOY_VERCEL.md).
+The standalone SQL schema to run in Neon SQL Editor is [`database/schema.sql`](./database/schema.sql).
 
 ## Scripts
 
