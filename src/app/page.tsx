@@ -1862,6 +1862,7 @@ function OrderDetail({
           ))}
         </select>
       </section>
+      <div className="detail-info-grid">
       <section className="detail-block">
         <h3>
           <UserRound size={18} /> Informações do cliente
@@ -1895,6 +1896,7 @@ function OrderDetail({
           Portugal
         </p>
       </section>
+      </div>
       <section className="detail-block">
         <div className="block-heading">
           <h3>
