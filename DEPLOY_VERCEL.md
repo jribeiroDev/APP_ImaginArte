@@ -59,14 +59,16 @@ Substitui `UTILIZADOR/REPOSITORIO` pelos dados reais do repositório.
 2. Clica em **Add New → Project**.
 3. Seleciona o repositório do ImaginArte e clica em **Import**.
 4. Mantém o framework como **Next.js** e deixa o **Build Command** como `npm run build`.
-5. Em **Environment Variables**, adiciona:
+5. Em **Root Directory**, seleciona a pasta que contém `package.json`, `src/` e `next.config.ts`. Neste projeto é a raiz do repositório: `.`. Não seleciones `src`.
+6. Deixa **Output Directory** vazio (a Vercel gere a saída do Next.js automaticamente). Não uses `dist`, `build` ou `out`.
+7. Em **Environment Variables**, adiciona:
 
    - `DATABASE_URL`: a connection string copiada do Neon.
    - `AUTH_SECRET`: uma chave aleatória longa, diferente da usada localmente.
    - `NEXT_PUBLIC_APP_URL`: o domínio Vercel, por exemplo `https://imaginarte.vercel.app`.
 
-6. Seleciona **Production**, **Preview** e **Development** quando quiseres usar a mesma configuração nos três ambientes.
-7. Clica em **Deploy**.
+8. Seleciona **Production**, **Preview** e **Development** quando quiseres usar a mesma configuração nos três ambientes.
+9. Clica em **Deploy**.
 
 ## 5. Confirmar o deploy
 
