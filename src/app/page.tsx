@@ -2012,6 +2012,7 @@ function OrderRow({
       </div>
       <div className="order-customer">
         <strong>{customer.name}</strong>
+        <small className="mobile-order-price">{money(order.total)}</small>
       </div>
       <div className="order-status">
         <StatusBadge status={order.status} />
