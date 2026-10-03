@@ -11,6 +11,8 @@ npm run dev
 
 The interface currently runs with local demo data so it can be reviewed without Neon credentials. Copy `.env.example` to `.env.local` and add a Neon pooled `DATABASE_URL` when connecting the production data layer.
 
+The current login screen validates email and password locally and stores a browser session so the prototype can be used privately during development. For production, this gate should be connected to the Neon `users` and `sessions` tables already defined in `src/lib/db/schema.ts`.
+
 ## Neon setup
 
 1. Create a Neon PostgreSQL project.

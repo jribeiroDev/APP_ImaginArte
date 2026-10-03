@@ -29,6 +29,8 @@ body {
 button, input, select, textarea { font: inherit; }
 button { cursor: pointer; }
 .app-shell { min-height: 100vh; }
+.auth-loading { min-height: 100vh; background: var(--background); }
+.login-screen { min-height: 100vh; display: grid; place-items: center; padding: 24px; background: radial-gradient(circle at top right, #e2f0e5 0, var(--background) 42%); color: var(--foreground); }.login-card { width: min(100%, 430px); padding: 38px 32px; border-radius: 26px; background: var(--surface); border: 1px solid var(--border); box-shadow: 0 18px 60px rgba(31, 70, 53, .12); }.login-logo { display: block; width: 210px; height: auto; margin: 0 auto; }.login-kicker { margin: 9px 0 32px; text-align: center; color: var(--muted); font-size: 12px; }.login-heading h1 { margin: 0; font-size: 28px; letter-spacing: -1px; }.login-heading p { margin: 7px 0 22px; color: var(--muted); }.login-form { display: grid; gap: 15px; }.login-form label { display: grid; gap: 7px; color: var(--muted); font-size: 13px; }.login-form .submit { margin-top: 5px; }.login-error { margin: -2px 0 0; color: var(--danger); font-size: 13px; }.dark.login-screen { background: radial-gradient(circle at top right, #214737 0, var(--background) 44%); }.dark .login-card { box-shadow: 0 18px 60px rgba(0, 0, 0, .28); }
 .content-wrap { width: min(1180px, calc(100% - 32px)); margin: 0 auto; }
 .glass { background: color-mix(in srgb, var(--surface) 92%, transparent); border: 1px solid var(--border); box-shadow: 0 8px 28px rgba(34, 57, 46, .055); }
 .card { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; }
