@@ -11,6 +11,7 @@ import {
   Copy,
   Home,
   Mail,
+  MapPin,
   Menu,
   Moon,
   Package,
@@ -20,6 +21,7 @@ import {
   Search,
   Settings2,
   ShoppingBag,
+  Trash2,
   Truck,
   UserRound,
   Users,
@@ -39,13 +41,6 @@ const money = (value: number) =>
   new Intl.NumberFormat("pt-PT", { style: "currency", currency: "EUR" }).format(
     value,
   );
-const flow: OrderStatus[] = [
-  "new",
-  "production",
-  "ready",
-  "shipped",
-  "delivered",
-];
 
 function StatusIcon({ status }: { status: OrderStatus }) {
   const props = { size: 16, strokeWidth: 2.2 };
@@ -197,7 +192,8 @@ export default function HomePage() {
           order.id === editingOrder.id ? updated : order,
         ),
       );
-      setSelectedOrder(updated);
+      setSelectedOrder(null);
+      setTab("orders");
     } else {
       const response = await fetch("/api/orders", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...data, payment: "pending" }) });
       const result = (await response.json()) as { error?: string };
@@ -257,6 +253,15 @@ export default function HomePage() {
     const result = (await response.json()) as { error?: string };
     if (!response.ok) throw new Error(result.error ?? "Não foi possível remover o cliente.");
     setCustomerList((current) => current.filter((item) => item.id !== customer.id));
+  };
+  const deleteOrder = async (order: Order) => {
+    if (!window.confirm(`Eliminar a encomenda #${order.id}? Esta ação não pode ser desfeita.`)) return;
+    const response = await fetch("/api/orders", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ orderNumber: order.id }) });
+    const result = (await response.json()) as { error?: string };
+    if (!response.ok) throw new Error(result.error ?? "Não foi possível remover a encomenda.");
+    setOrders((current) => current.filter((item) => item.id !== order.id));
+    setSelectedOrder(null);
+    setTab("orders");
   };
 
   if (authenticated === null) return <div className="app-shell auth-loading" />;
@@ -331,6 +336,7 @@ export default function HomePage() {
               setShowNew(true);
             }}
             onUpdateStatus={updateStatus}
+            onDelete={() => deleteOrder(selectedOrder).catch((reason: unknown) => window.alert(reason instanceof Error ? reason.message : "Não foi possível remover a encomenda."))}
           />
         ) : (
           <>
@@ -617,7 +623,7 @@ function ProductsView({
             </div>
             <div className="product-list-info">
               <strong>{product.name}</strong>
-              <span>{product.category}</span>
+              <span>{product.category} · Stock: {product.stock}</span>
             </div>
             <strong>{money(product.price)}</strong>
             <button
@@ -628,7 +634,7 @@ function ProductsView({
               <Pencil size={17} />
             </button>
             <button className="icon-btn action-icon-button delete-button" aria-label={`Remover ${product.name}`} onClick={() => onDeleteProduct(product).catch((reason: unknown) => window.alert(reason instanceof Error ? reason.message : "Não foi possível remover o produto."))}>
-              <X size={17} />
+              <Trash2 size={17} />
             </button>
           </div>
         ))}
@@ -828,7 +834,7 @@ function CustomersView({
               <span>{customer.phone || "Sem telefone"}</span>
             </div>
             <button className="customer-edit-button action-icon-button edit-button" aria-label={`Editar ${customer.name}`} onClick={() => setEditingCustomer(customer)}><Pencil size={16} /></button>
-            <button className="customer-edit-button action-icon-button delete-button" aria-label={`Remover ${customer.name}`} onClick={() => onDeleteCustomer(customer).catch((reason: unknown) => window.alert(reason instanceof Error ? reason.message : "Não foi possível remover o cliente."))}><X size={16} /></button>
+            <button className="customer-edit-button action-icon-button delete-button" aria-label={`Remover ${customer.name}`} onClick={() => onDeleteCustomer(customer).catch((reason: unknown) => window.alert(reason instanceof Error ? reason.message : "Não foi possível remover o cliente."))}><Trash2 size={16} /></button>
           </div>
         ))}
       </div>
@@ -1029,12 +1035,13 @@ function NewOrderDialog({
                       ? "selection-row selected"
                       : "selection-row"
                   }
+                  disabled={product.stock <= 0 && !productIds.includes(product.id)}
                   onClick={() => toggleProduct(product.id)}
                 >
                   <ProductThumb productId={product.id} catalog={products} />
                   <span>
                     <strong>{product.name}</strong>
-                    <small>{money(product.price)}</small>
+                    <small>{money(product.price)} · {product.stock} em stock</small>
                   </span>
                   {productIds.includes(product.id) && <Check size={17} />}
                 </button>
@@ -1100,10 +1107,11 @@ function ProductDialog({
   const [name, setName] = useState(product?.name ?? "");
   const [price, setPrice] = useState(String(product?.price ?? ""));
   const [category, setCategory] = useState(product?.category ?? "Presentes");
+  const [stock, setStock] = useState(String(product?.stock ?? 0));
   const [error, setError] = useState("");
   const save = async () => {
     try {
-      await onSave({ id: product?.id ?? "", name: name || "Novo produto", price: Number(price) || 0, category, color: product?.color ?? "#dcebdc", active: true }, !product);
+      await onSave({ id: product?.id ?? "", name: name || "Novo produto", price: Number(price) || 0, category, color: product?.color ?? "#dcebdc", active: true, stock: Number(stock) || 0 }, !product);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Não foi possível guardar o produto.");
     }
@@ -1144,6 +1152,10 @@ function ProductDialog({
             />
           </label>
         </div>
+        <label>
+          Quantidade em stock
+          <input type="number" min="0" step="1" className="input" value={stock} onChange={(event) => setStock(event.target.value)} placeholder="0" />
+        </label>
         {error && <p className="login-error">{error}</p>}
         <button
           className="btn-primary submit"
@@ -1162,6 +1174,7 @@ function OrderDetail({
   onClose,
   onEdit,
   onUpdateStatus,
+  onDelete,
 }: {
   order: Order;
   catalog: Product[];
@@ -1169,6 +1182,7 @@ function OrderDetail({
   onClose: () => void;
   onEdit: () => void;
   onUpdateStatus: (status: OrderStatus) => void;
+  onDelete: () => void;
 }) {
   const customer =
     customers.find((item) => item.id === order.customerId) ?? customers[0];
@@ -1187,44 +1201,29 @@ function OrderDetail({
           <ChevronLeft size={22} />
         </button>
         <div>
-          <p className="eyebrow">Detalhes da encomenda</p>
           <h1>Encomenda #{order.id}</h1>
         </div>
-        <button
-          className="icon-btn"
-          aria-label="Editar encomenda"
-          onClick={onEdit}
-        >
-          <Pencil size={19} />
+        <button className="icon-btn action-icon-button delete-button" aria-label="Eliminar encomenda" onClick={onDelete}>
+          <Trash2 size={18} />
         </button>
       </div>
-      <div className="progress-line">
-        {flow.map((step, index) => (
-          <div
-            className={
-              step === order.status || index <= flow.indexOf(order.status)
-                ? "progress-step done"
-                : "progress-step"
-            }
-            key={step}
-          >
-            <span>
-              <StatusIcon status={step} />
-            </span>
-            <small>
-              {step === "new"
-                ? "Recebida"
-                : step === "production"
-                  ? "Produção"
-                  : step === "ready"
-                    ? "Pronta"
-                    : step === "shipped"
-                      ? "Enviada"
-                      : "Entregue"}
-            </small>
-          </div>
-        ))}
-      </div>
+      <section className="status-update prominent detail-status-card">
+        <div>
+          <span className="eyebrow">Estado atual</span>
+          <strong>
+            <StatusIcon status={order.status} /> {statusMeta[order.status].label}
+          </strong>
+        </div>
+        <select
+          className="input"
+          value={order.status}
+          onChange={(event) => onUpdateStatus(event.target.value as OrderStatus)}
+        >
+          {Object.entries(statusMeta).map(([key, meta]) => (
+            <option value={key} key={key}>{meta.label}</option>
+          ))}
+        </select>
+      </section>
       <section className="detail-block">
         <h3>
           <UserRound size={18} /> Informações do cliente
@@ -1242,7 +1241,7 @@ function OrderDetail({
       <section className="detail-block address-block">
         <div className="block-heading">
           <h3>
-            <span className="pin-icon">⌖</span> Morada de entrega
+            <MapPin size={18} /> Morada de entrega
           </h3>
           <button
             className={copied ? "icon-btn copied" : "icon-btn"}
@@ -1285,28 +1284,6 @@ function OrderDetail({
           <strong>Total</strong>
           <strong>{money(order.total)}</strong>
         </div>
-      </section>
-      <section className="status-update prominent">
-        <div>
-          <span className="eyebrow">Estado atual</span>
-          <strong>
-            <StatusIcon status={order.status} />{" "}
-            {statusMeta[order.status].label}
-          </strong>
-        </div>
-        <select
-          className="input"
-          value={order.status}
-          onChange={(event) =>
-            onUpdateStatus(event.target.value as OrderStatus)
-          }
-        >
-          {Object.entries(statusMeta).map(([key, meta]) => (
-            <option value={key} key={key}>
-              {meta.label}
-            </option>
-          ))}
-        </select>
       </section>
     </div>
   );

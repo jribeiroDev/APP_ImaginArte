@@ -6,10 +6,10 @@ import { getCurrentUser } from "@/lib/auth";
 
 export const runtime = "nodejs";
 
-type ProductBody = { id?: string; name?: string; price?: number; category?: string; active?: boolean };
+type ProductBody = { id?: string; name?: string; price?: number; category?: string; stock?: number; active?: boolean };
 
 function responseProduct(product: typeof products.$inferSelect) {
-  return { id: product.id, name: product.name, price: product.priceCents / 100, category: product.description ?? "Produto", color: "#eaded3", active: product.active === 1 };
+  return { id: product.id, name: product.name, price: product.priceCents / 100, category: product.description ?? "Produto", color: "#eaded3", active: product.active === 1, stock: product.stock };
 }
 
 export async function POST(request: Request) {
@@ -41,8 +41,9 @@ async function saveProduct(request: Request, editing: boolean) {
     const body = await request.json() as ProductBody;
     const name = body.name?.trim();
     const price = Number(body.price);
-    if ((editing && !body.id) || !name || !Number.isFinite(price) || price < 0) return NextResponse.json({ error: "Indica um nome e um preço válido." }, { status: 400 });
-    const values = { name, description: body.category?.trim() || "Produto", priceCents: Math.round(price * 100), active: body.active === false ? 0 : 1 };
+    const stock = Number(body.stock);
+    if ((editing && !body.id) || !name || !Number.isFinite(price) || price < 0 || !Number.isInteger(stock) || stock < 0) return NextResponse.json({ error: "Indica um nome, preço e quantidade válidos." }, { status: 400 });
+    const values = { name, description: body.category?.trim() || "Produto", priceCents: Math.round(price * 100), stock, active: body.active === false ? 0 : 1 };
     const result = editing
       ? await db.update(products).set(values).where(eq(products.id, body.id as string)).returning()
       : await db.insert(products).values(values).returning();

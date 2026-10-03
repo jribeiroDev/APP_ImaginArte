@@ -46,6 +46,7 @@ CREATE TABLE IF NOT EXISTS products (
   name TEXT NOT NULL,
   description TEXT,
   price_cents INTEGER NOT NULL,
+  stock INTEGER NOT NULL DEFAULT 0 CHECK (stock >= 0),
   image_url TEXT,
   active INTEGER NOT NULL DEFAULT 1,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()

@@ -1,16 +1,16 @@
 export type OrderStatus = "new" | "production" | "ready" | "shipped" | "delivered" | "cancelled";
 export type PaymentStatus = "pending" | "paid" | "refunded";
 
-export type Product = { id: string; name: string; price: number; category: string; color: string; active: boolean };
+export type Product = { id: string; name: string; price: number; category: string; color: string; active: boolean; stock: number };
 export type Customer = { id: string; name: string; phone: string; email: string; city: string; address?: string; postalCode?: string };
 export type Order = { id: string; customerId: string; productIds: string[]; quantities?: Record<string, number>; date: string; delivery: string; status: OrderStatus; payment: PaymentStatus; total: number; notes?: string };
 
 export const products: Product[] = [
-  { id: "p1", name: "Caneca personalizada", price: 12, category: "Canecas", color: "#eaded3", active: true },
-  { id: "p2", name: "Caixa de madeira personalizada", price: 15, category: "Caixas", color: "#d9b48d", active: true },
-  { id: "p3", name: "Puzzle personalizado", price: 18, category: "Presentes", color: "#e4c2a7", active: true },
-  { id: "p4", name: "Placa de casamento", price: 22, category: "Decoração", color: "#e9d2b7", active: true },
-  { id: "p5", name: "Porta-chaves", price: 9, category: "Presentes", color: "#c9a879", active: true },
+  { id: "p1", name: "Caneca personalizada", price: 12, category: "Canecas", color: "#eaded3", active: true, stock: 0 },
+  { id: "p2", name: "Caixa de madeira personalizada", price: 15, category: "Caixas", color: "#d9b48d", active: true, stock: 0 },
+  { id: "p3", name: "Puzzle personalizado", price: 18, category: "Presentes", color: "#e4c2a7", active: true, stock: 0 },
+  { id: "p4", name: "Placa de casamento", price: 22, category: "Decoração", color: "#e9d2b7", active: true, stock: 0 },
+  { id: "p5", name: "Porta-chaves", price: 9, category: "Presentes", color: "#c9a879", active: true, stock: 0 },
 ];
 
 export const customers: Customer[] = [
