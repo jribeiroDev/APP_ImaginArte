@@ -237,8 +237,16 @@ export default function HomePage() {
         );
       const updated = { ...editingOrder, ...data, total };
       const refreshed = await fetch("/api/dashboard", { cache: "no-store" });
-      const dashboard = (await refreshed.json()) as { customers?: Customer[]; products?: Product[]; orders?: Order[]; error?: string };
-      if (!refreshed.ok) throw new Error(dashboard.error ?? "Não foi possível atualizar os dados.");
+      const dashboard = (await refreshed.json()) as {
+        customers?: Customer[];
+        products?: Product[];
+        orders?: Order[];
+        error?: string;
+      };
+      if (!refreshed.ok)
+        throw new Error(
+          dashboard.error ?? "Não foi possível atualizar os dados.",
+        );
       setCustomerList(dashboard.customers ?? []);
       setProductList(dashboard.products ?? []);
       setOrders(dashboard.orders ?? [updated]);
@@ -284,7 +292,9 @@ export default function HomePage() {
       });
       const result = (await response.json()) as { error?: string };
       if (!response.ok)
-        throw new Error(result.error ?? "Não foi possível atualizar o pagamento.");
+        throw new Error(
+          result.error ?? "Não foi possível atualizar o pagamento.",
+        );
       const [dashboardResponse, financeResponse] = await Promise.all([
         fetch("/api/dashboard", { cache: "no-store" }),
         fetch("/api/finance", { cache: "no-store" }),
@@ -1640,30 +1650,30 @@ function NewOrderDialog({
           )}
         </FormSection>
         <div className="form-grid">
-            <label>
-              Entrega
-              <input
-                type="date"
-                className="input"
-                value={delivery}
-                onChange={(event) => setDelivery(event.target.value)}
-              />
-            </label>
-            <label>
-              Pagamento
-              <select
-                className="input"
-                value={payment}
-                onChange={(event) =>
-                  setPayment(event.target.value as PaymentStatus)
-                }
-              >
-                <option value="pending">Pendente</option>
-                <option value="paid">Pago</option>
-                <option value="refunded">Reembolsado</option>
-              </select>
-            </label>
-          </div>
+          <label>
+            Entrega
+            <input
+              type="date"
+              className="input"
+              value={delivery}
+              onChange={(event) => setDelivery(event.target.value)}
+            />
+          </label>
+          <label>
+            Pagamento
+            <select
+              className="input"
+              value={payment}
+              onChange={(event) =>
+                setPayment(event.target.value as PaymentStatus)
+              }
+            >
+              <option value="pending">Pendente</option>
+              <option value="paid">Pago</option>
+              <option value="refunded">Reembolsado</option>
+            </select>
+          </label>
+        </div>
         <label>
           Notas
           <textarea
@@ -1843,10 +1853,10 @@ function OrderDetail({
       <section className="status-update prominent detail-status-card">
         <div>
           <span className="eyebrow">Estado atual</span>
-          <strong>
+          {/* <strong>
             <StatusIcon status={order.status} />{" "}
             {statusMeta[order.status].label}
-          </strong>
+          </strong> */}
         </div>
         <select
           className="input"
@@ -1863,39 +1873,39 @@ function OrderDetail({
         </select>
       </section>
       <div className="detail-info-grid">
-      <section className="detail-block">
-        <h3>
-          <UserRound size={18} /> Informações do cliente
-        </h3>
-        <p>
-          <UserRound size={15} /> <strong>{customer.name}</strong>
-        </p>
-        <p>
-          <Phone size={15} /> {customer.phone || "912 345 678"}
-        </p>
-        <p>
-          <Mail size={15} /> {customer.email || "cliente@email.com"}
-        </p>
-      </section>
-      <section className="detail-block address-block">
-        <div className="block-heading">
+        <section className="detail-block">
           <h3>
-            <MapPin size={18} /> Morada de entrega
+            <UserRound size={18} /> Informações do cliente
           </h3>
-          <button
-            className={copied ? "icon-btn copied" : "icon-btn"}
-            aria-label="Copiar morada"
-            onClick={copyAddress}
-          >
-            {copied ? <Check size={17} /> : <Copy size={17} />}
-          </button>
-        </div>
-        <p>{customer.address || "Rua das Flores, nº 12"}</p>
-        <p>
-          {customer.postalCode || "4700-123"} {customer.city || "Braga"},
-          Portugal
-        </p>
-      </section>
+          <p>
+            <UserRound size={15} /> <strong>{customer.name}</strong>
+          </p>
+          <p>
+            <Phone size={15} /> {customer.phone || "912 345 678"}
+          </p>
+          <p>
+            <Mail size={15} /> {customer.email || "cliente@email.com"}
+          </p>
+        </section>
+        <section className="detail-block address-block">
+          <div className="block-heading">
+            <h3>
+              <MapPin size={18} /> Morada de entrega
+            </h3>
+            <button
+              className={copied ? "icon-btn copied" : "icon-btn"}
+              aria-label="Copiar morada"
+              onClick={copyAddress}
+            >
+              {copied ? <Check size={17} /> : <Copy size={17} />}
+            </button>
+          </div>
+          <p>{customer.address || "Rua das Flores, nº 12"}</p>
+          <p>
+            {customer.postalCode || "4700-123"} {customer.city || "Braga"},
+            Portugal
+          </p>
+        </section>
       </div>
       <section className="detail-block">
         <div className="block-heading">
@@ -2017,13 +2027,15 @@ function OrderRow({
         onClick={(event) => event.stopPropagation()}
         onChange={(event) => {
           event.stopPropagation();
-          void onUpdatePayment(order, event.target.value as PaymentStatus).catch(
-            (reason: unknown) =>
-              window.alert(
-                reason instanceof Error
-                  ? reason.message
-                  : "Não foi possível atualizar o pagamento.",
-              ),
+          void onUpdatePayment(
+            order,
+            event.target.value as PaymentStatus,
+          ).catch((reason: unknown) =>
+            window.alert(
+              reason instanceof Error
+                ? reason.message
+                : "Não foi possível atualizar o pagamento.",
+            ),
           );
         }}
       >
