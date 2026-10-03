@@ -175,18 +175,22 @@ export default function HomePage() {
     [orders],
   );
 
-  const saveOrder = (data: {
+  const saveOrder = async (data: {
     customerId: string;
     productIds: string[];
+    quantities: Record<string, number>;
     delivery: string;
     notes: string;
   }) => {
     const total = data.productIds.reduce(
       (sum, id) =>
-        sum + (productList.find((product) => product.id === id)?.price ?? 0),
+        sum + (productList.find((product) => product.id === id)?.price ?? 0) * (data.quantities[id] ?? 1),
       0,
     );
     if (editingOrder) {
+      const response = await fetch("/api/orders", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...data, orderNumber: editingOrder.id }) });
+      const result = (await response.json()) as { error?: string };
+      if (!response.ok) throw new Error(result.error ?? "Não foi possível guardar as alterações.");
       const updated = { ...editingOrder, ...data, total };
       setOrders((current) =>
         current.map((order) =>
@@ -195,15 +199,14 @@ export default function HomePage() {
       );
       setSelectedOrder(updated);
     } else {
-      const newOrder: Order = {
-        id: String(1259 + orders.length),
-        ...data,
-        date: "Hoje",
-        status: "new",
-        payment: "pending",
-        total,
-      };
-      setOrders((current) => [newOrder, ...current]);
+      const response = await fetch("/api/orders", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...data, payment: "pending" }) });
+      const result = (await response.json()) as { error?: string };
+      if (!response.ok) throw new Error(result.error ?? "Não foi possível guardar a encomenda.");
+      const refreshed = await fetch("/api/dashboard", { cache: "no-store" });
+      const dashboard = (await refreshed.json()) as { customers?: Customer[]; products?: Product[]; orders?: Order[] };
+      setCustomerList(dashboard.customers ?? []);
+      setProductList(dashboard.products ?? []);
+      setOrders(dashboard.orders ?? []);
       setTab("orders");
     }
     setEditingOrder(null);
@@ -221,6 +224,39 @@ export default function HomePage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ orderNumber: selectedOrder.id, status }),
     });
+  };
+  const registerCustomer = async (data: Omit<Customer, "id">): Promise<Customer> => {
+    const response = await fetch("/api/customers", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
+    const result = (await response.json()) as { customer?: Customer; error?: string };
+    if (!response.ok || !result.customer) throw new Error(result.error ?? "Não foi possível registar o cliente.");
+    setCustomerList((current) => [...current, result.customer as Customer]);
+    return result.customer as Customer;
+  };
+  const updateCustomer = async (customer: Customer) => {
+    const response = await fetch("/api/customers", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(customer) });
+    const result = (await response.json()) as { customer?: Customer; error?: string };
+    if (!response.ok || !result.customer) throw new Error(result.error ?? "Não foi possível atualizar o cliente.");
+    setCustomerList((current) => current.map((item) => item.id === customer.id ? result.customer as Customer : item));
+  };
+  const saveProduct = async (product: Product, isNew: boolean) => {
+    const response = await fetch("/api/products", { method: isNew ? "POST" : "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(product) });
+    const result = (await response.json()) as { product?: Product; error?: string };
+    if (!response.ok || !result.product) throw new Error(result.error ?? "Não foi possível guardar o produto.");
+    setProductList((current) => isNew ? [...current, result.product as Product] : current.map((item) => item.id === product.id ? result.product as Product : item));
+  };
+  const deleteProduct = async (product: Product) => {
+    if (!window.confirm(`Remover o produto "${product.name}"?`)) return;
+    const response = await fetch("/api/products", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: product.id }) });
+    const result = (await response.json()) as { error?: string };
+    if (!response.ok) throw new Error(result.error ?? "Não foi possível remover o produto.");
+    setProductList((current) => current.filter((item) => item.id !== product.id));
+  };
+  const deleteCustomer = async (customer: Customer) => {
+    if (!window.confirm(`Remover o cliente "${customer.name}"?`)) return;
+    const response = await fetch("/api/customers", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: customer.id }) });
+    const result = (await response.json()) as { error?: string };
+    if (!response.ok) throw new Error(result.error ?? "Não foi possível remover o cliente.");
+    setCustomerList((current) => current.filter((item) => item.id !== customer.id));
   };
 
   if (authenticated === null) return <div className="app-shell auth-loading" />;
@@ -329,7 +365,8 @@ export default function HomePage() {
             {tab === "products" && (
               <ProductsView
                 products={productList}
-                setProducts={setProductList}
+                onSaveProduct={saveProduct}
+                onDeleteProduct={deleteProduct}
               />
             )}
             {tab === "more" && (
@@ -350,6 +387,9 @@ export default function HomePage() {
               <CustomersView
                 customers={customerList}
                 onBack={() => setTab("more")}
+                onAddCustomer={registerCustomer}
+                onUpdateCustomer={updateCustomer}
+                onDeleteCustomer={deleteCustomer}
               />
             )}
           </>
@@ -393,9 +433,7 @@ export default function HomePage() {
             setEditingOrder(null);
           }}
           onSave={saveOrder}
-          onAddCustomer={(customer) =>
-            setCustomerList((current) => [...current, customer])
-          }
+          onAddCustomer={async (customer) => registerCustomer({ name: customer.name, email: customer.email, phone: customer.phone, city: customer.city, address: customer.address, postalCode: customer.postalCode })}
         />
       )}
     </div>
@@ -550,10 +588,12 @@ function OrdersView({
 }
 function ProductsView({
   products,
-  setProducts,
+  onSaveProduct,
+  onDeleteProduct,
 }: {
   products: Product[];
-  setProducts: (products: Product[]) => void;
+  onSaveProduct: (product: Product, isNew: boolean) => Promise<void>;
+  onDeleteProduct: (product: Product) => Promise<void>;
 }) {
   const [dialog, setDialog] = useState<Product | "new" | null>(null);
   return (
@@ -581,11 +621,14 @@ function ProductsView({
             </div>
             <strong>{money(product.price)}</strong>
             <button
-              className="icon-btn"
+              className="icon-btn action-icon-button edit-button"
               aria-label={`Editar ${product.name}`}
               onClick={() => setDialog(product)}
             >
               <Pencil size={17} />
+            </button>
+            <button className="icon-btn action-icon-button delete-button" aria-label={`Remover ${product.name}`} onClick={() => onDeleteProduct(product).catch((reason: unknown) => window.alert(reason instanceof Error ? reason.message : "Não foi possível remover o produto."))}>
+              <X size={17} />
             </button>
           </div>
         ))}
@@ -594,14 +637,8 @@ function ProductsView({
         <ProductDialog
           product={dialog === "new" ? null : dialog}
           onClose={() => setDialog(null)}
-          onSave={(product) => {
-            setProducts(
-              products.some((item) => item.id === product.id)
-                ? products.map((item) =>
-                    item.id === product.id ? product : item,
-                  )
-                : [...products, product],
-            );
+          onSave={async (product, isNew) => {
+            await onSaveProduct(product, isNew);
             setDialog(null);
           }}
         />
@@ -740,11 +777,19 @@ function LoginScreen({
 function CustomersView({
   customers,
   onBack,
+  onAddCustomer,
+  onUpdateCustomer,
+  onDeleteCustomer,
 }: {
   customers: Customer[];
   onBack: () => void;
+  onAddCustomer: (customer: Omit<Customer, "id">) => Promise<Customer>;
+  onUpdateCustomer: (customer: Customer) => Promise<void>;
+  onDeleteCustomer: (customer: Customer) => Promise<void>;
 }) {
   const [search, setSearch] = useState("");
+  const [showDialog, setShowDialog] = useState(false);
+  const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const visible = customers.filter((customer) =>
     `${customer.name} ${customer.email} ${customer.phone}`
       .toLowerCase()
@@ -759,7 +804,7 @@ function CustomersView({
           </button>
           <h1>Clientes</h1>
         </div>
-        <button className="round-primary">
+        <button className="round-primary" aria-label="Registar cliente" onClick={() => setShowDialog(true)}>
           <Plus size={25} />
         </button>
       </section>
@@ -782,12 +827,27 @@ function CustomersView({
               <span>{customer.email || "Sem email"}</span>
               <span>{customer.phone || "Sem telefone"}</span>
             </div>
-            <ChevronRight size={18} />
+            <button className="customer-edit-button action-icon-button edit-button" aria-label={`Editar ${customer.name}`} onClick={() => setEditingCustomer(customer)}><Pencil size={16} /></button>
+            <button className="customer-edit-button action-icon-button delete-button" aria-label={`Remover ${customer.name}`} onClick={() => onDeleteCustomer(customer).catch((reason: unknown) => window.alert(reason instanceof Error ? reason.message : "Não foi possível remover o cliente."))}><X size={16} /></button>
           </div>
         ))}
       </div>
+      {showDialog && <CustomerDialog key="new" onClose={() => setShowDialog(false)} onSave={async (customer) => { const newCustomer = Object.fromEntries(Object.entries(customer).filter(([key]) => key !== "id")) as Omit<Customer, "id">; await onAddCustomer(newCustomer); setShowDialog(false); }} />}
+      {editingCustomer && <CustomerDialog key={editingCustomer.id} customer={editingCustomer} onClose={() => setEditingCustomer(null)} onSave={async (customer) => { await onUpdateCustomer(customer as Customer); setEditingCustomer(null); }} />}
     </>
   );
+}
+
+function CustomerDialog({ customer, onClose, onSave }: { customer?: Customer; onClose: () => void; onSave: (customer: Omit<Customer, "id"> | Customer) => Promise<void> }) {
+  const [form, setForm] = useState<Omit<Customer, "id">>({ name: customer?.name ?? "", email: customer?.email ?? "", phone: customer?.phone ?? "", city: customer?.city ?? "", address: customer?.address ?? "", postalCode: customer?.postalCode ?? "" });
+  const [error, setError] = useState("");
+  const update = (field: keyof Omit<Customer, "id">, value: string) => setForm((current) => ({ ...current, [field]: value }));
+  const submit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!form.name.trim()) { setError("Introduz o nome do cliente."); return; }
+    try { await onSave(customer ? { ...form, id: customer.id } : form); } catch (reason) { setError(reason instanceof Error ? reason.message : "Não foi possível guardar o cliente."); }
+  };
+  return <Modal title={customer ? "Editar cliente" : "Registar cliente"} onClose={onClose}><form className="order-form" onSubmit={submit}><label>Nome<input className="input" value={form.name} onChange={(event) => update("name", event.target.value)} placeholder="Nome completo" autoFocus /></label><div className="form-grid"><label>Email<input className="input" type="email" value={form.email} onChange={(event) => update("email", event.target.value)} placeholder="cliente@email.com" /></label><label>Telefone<input className="input" type="tel" value={form.phone} onChange={(event) => update("phone", event.target.value)} placeholder="912 345 678" /></label></div><label>Morada<input className="input" value={form.address} onChange={(event) => update("address", event.target.value)} placeholder="Rua, número e andar" /></label><div className="form-grid"><label>Código postal<input className="input" value={form.postalCode} onChange={(event) => update("postalCode", event.target.value)} placeholder="4700-123" /></label><label>Cidade<input className="input" value={form.city} onChange={(event) => update("city", event.target.value)} placeholder="Braga" /></label></div>{error && <p className="login-error">{error}</p>}<button className="btn-primary submit" type="submit"><Check size={18} /> {customer ? "Guardar alterações" : "Registar cliente"}</button></form></Modal>;
 }
 
 function NewOrderDialog({
@@ -805,10 +865,11 @@ function NewOrderDialog({
   onSave: (data: {
     customerId: string;
     productIds: string[];
+    quantities: Record<string, number>;
     delivery: string;
     notes: string;
-  }) => void;
-  onAddCustomer: (customer: Customer) => void;
+  }) => void | Promise<void>;
+  onAddCustomer: (customer: Customer) => Promise<Customer>;
 }) {
   const [customerSearch, setCustomerSearch] = useState("");
   const [customerId, setCustomerId] = useState(
@@ -817,9 +878,11 @@ function NewOrderDialog({
   const [productIds, setProductIds] = useState<string[]>(
     order?.productIds ?? [],
   );
+  const [quantities, setQuantities] = useState<Record<string, number>>(order?.quantities ?? Object.fromEntries((order?.productIds ?? []).map((id) => [id, 1])));
   const [showProductPicker, setShowProductPicker] = useState(!order);
   const [showNewCustomer, setShowNewCustomer] = useState(false);
   const [newCustomerName, setNewCustomerName] = useState("");
+  const [saveError, setSaveError] = useState("");
   const [delivery, setDelivery] = useState(order?.delivery ?? "");
   const [notes, setNotes] = useState(order?.notes ?? "");
   const filtered = customers.filter((customer) =>
@@ -828,24 +891,29 @@ function NewOrderDialog({
       .includes(customerSearch.toLowerCase()),
   );
   const toggleProduct = (id: string) =>
-    setProductIds((current) =>
-      current.includes(id)
-        ? current.filter((item) => item !== id)
-        : [...current, id],
-    );
-  const createCustomer = () => {
+    setProductIds((current) => {
+      if (current.includes(id)) {
+        setQuantities((values) => { const next = { ...values }; delete next[id]; return next; });
+        return current.filter((item) => item !== id);
+      }
+      setQuantities((values) => ({ ...values, [id]: 1 }));
+      return [...current, id];
+    });
+  const changeQuantity = (id: string, delta: number) => setQuantities((values) => ({ ...values, [id]: Math.max(1, (values[id] ?? 1) + delta) }));
+  const createCustomer = async () => {
     if (!newCustomerName.trim()) return;
-    const customer = {
+    try {
+      const customer = await onAddCustomer({
       id: `c-${Date.now()}`,
       name: newCustomerName.trim(),
       phone: "",
       email: "",
       city: "",
-    };
-    onAddCustomer(customer);
-    setCustomerId(customer.id);
-    setShowNewCustomer(false);
-    setNewCustomerName("");
+      });
+      setCustomerId(customer.id);
+      setShowNewCustomer(false);
+      setNewCustomerName("");
+    } catch (reason) { setSaveError(reason instanceof Error ? reason.message : "Não foi possível registar o cliente."); }
   };
   return (
     <Modal
@@ -908,6 +976,7 @@ function NewOrderDialog({
                 <Plus size={17} /> Adicionar novo cliente
               </button>
             )}
+            {saveError && <p className="login-error">{saveError}</p>}
           </FormSection>
         )}
         <FormSection
@@ -923,8 +992,9 @@ function NewOrderDialog({
                     <ProductThumb productId={id} catalog={products} />
                     <span>
                       <strong>{product.name}</strong>
-                      <small>{money(product.price)}</small>
+                      <small>{money(product.price)} · {quantities[id] ?? 1} un.</small>
                     </span>
+                    <div className="quantity-control"><button type="button" onClick={() => changeQuantity(id, -1)} aria-label="Diminuir quantidade">−</button><strong>{quantities[id] ?? 1}</strong><button type="button" onClick={() => changeQuantity(id, 1)} aria-label="Aumentar quantidade">+</button></div>
                     <button
                       type="button"
                       aria-label={`Remover ${product.name}`}
@@ -1005,10 +1075,11 @@ function NewOrderDialog({
             placeholder="Detalhes da personalização..."
           />
         </label>
+        {saveError && <p className="login-error">{saveError}</p>}
         <button
           className="btn-primary submit"
           disabled={!productIds.length}
-          onClick={() => onSave({ customerId, productIds, delivery, notes })}
+          onClick={async () => { try { await onSave({ customerId, productIds, quantities, delivery, notes }); } catch (reason) { setSaveError(reason instanceof Error ? reason.message : "Não foi possível guardar a encomenda."); } }}
         >
           <Check size={19} />{" "}
           {order ? "Guardar alterações" : "Guardar encomenda"}
@@ -1024,11 +1095,19 @@ function ProductDialog({
 }: {
   product: Product | null;
   onClose: () => void;
-  onSave: (product: Product) => void;
+  onSave: (product: Product, isNew: boolean) => Promise<void>;
 }) {
   const [name, setName] = useState(product?.name ?? "");
   const [price, setPrice] = useState(String(product?.price ?? ""));
   const [category, setCategory] = useState(product?.category ?? "Presentes");
+  const [error, setError] = useState("");
+  const save = async () => {
+    try {
+      await onSave({ id: product?.id ?? "", name: name || "Novo produto", price: Number(price) || 0, category, color: product?.color ?? "#dcebdc", active: true }, !product);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Não foi possível guardar o produto.");
+    }
+  };
   return (
     <Modal
       title={product ? "Editar produto" : "Novo produto"}
@@ -1065,18 +1144,10 @@ function ProductDialog({
             />
           </label>
         </div>
+        {error && <p className="login-error">{error}</p>}
         <button
           className="btn-primary submit"
-          onClick={() =>
-            onSave({
-              id: product?.id ?? `p-${Date.now()}`,
-              name: name || "Novo produto",
-              price: Number(price) || 0,
-              category,
-              color: product?.color ?? "#dcebdc",
-              active: true,
-            })
-          }
+          onClick={save}
         >
           <Check size={19} /> Guardar produto
         </button>
@@ -1204,9 +1275,9 @@ function OrderDetail({
               <ProductThumb productId={id} catalog={catalog} />
               <span>
                 <strong>{product.name}</strong>
-                <small>1 un.</small>
+                    <small>{order.quantities?.[id] ?? 1} un.</small>
               </span>
-              <strong>{money(product.price)}</strong>
+                <strong>{money(product.price * (order.quantities?.[id] ?? 1))}</strong>
             </div>
           );
         })}

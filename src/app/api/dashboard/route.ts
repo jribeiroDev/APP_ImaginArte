@@ -29,12 +29,13 @@ export async function GET() {
     return NextResponse.json({
       source: "database",
       customers: customerRows.map((customer) => ({ id: customer.id, name: customer.name, phone: customer.phone ?? "", email: customer.email ?? "", city: customer.city ?? "", address: customer.address ?? undefined, postalCode: customer.postalCode ?? undefined })),
-      products: productRows.map((product) => ({ id: product.id, name: product.name, price: product.priceCents / 100, category: "Produto", color: "#eaded3", active: product.active === 1 })),
+      products: productRows.map((product) => ({ id: product.id, name: product.name, price: product.priceCents / 100, category: product.description ?? "Produto", color: "#eaded3", active: product.active === 1 })),
       orders: orderRows.map((order) => ({
         id: String(order.orderNumber),
         databaseId: order.id,
         customerId: order.customerId,
         productIds: itemRows.filter((item) => item.orderId === order.id).map((item) => item.productId),
+        quantities: Object.fromEntries(itemRows.filter((item) => item.orderId === order.id).map((item) => [item.productId, item.quantity])),
         date: formatDate(order.orderDate, "Hoje"),
         delivery: formatDate(order.deliveryDate),
         status: order.status,
