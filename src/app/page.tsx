@@ -33,6 +33,7 @@ import {
   type Customer,
   type Order,
   type OrderStatus,
+  type PaymentStatus,
   type Product,
 } from "@/lib/demo-data";
 
@@ -214,6 +215,7 @@ export default function HomePage() {
     quantities: Record<string, number>;
     delivery: string;
     notes: string;
+    payment: PaymentStatus;
   }) => {
     const total = data.productIds.reduce(
       (sum, id) =>
@@ -246,7 +248,7 @@ export default function HomePage() {
       const response = await fetch("/api/orders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...data, payment: "pending" }),
+        body: JSON.stringify(data),
       });
       const result = (await response.json()) as { error?: string };
       if (!response.ok)
@@ -266,6 +268,54 @@ export default function HomePage() {
     }
     setEditingOrder(null);
     setShowNew(false);
+  };
+  const updatePayment = async (order: Order, payment: PaymentStatus) => {
+    const previous = order.payment;
+    setOrders((current) =>
+      current.map((item) =>
+        item.id === order.id ? { ...item, payment } : item,
+      ),
+    );
+    try {
+      const response = await fetch("/api/orders", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderNumber: order.id, payment }),
+      });
+      const result = (await response.json()) as { error?: string };
+      if (!response.ok)
+        throw new Error(result.error ?? "Não foi possível atualizar o pagamento.");
+      const [dashboardResponse, financeResponse] = await Promise.all([
+        fetch("/api/dashboard", { cache: "no-store" }),
+        fetch("/api/finance", { cache: "no-store" }),
+      ]);
+      const dashboard = (await dashboardResponse.json()) as {
+        customers?: Customer[];
+        products?: Product[];
+        orders?: Order[];
+        error?: string;
+      };
+      const financeData = (await financeResponse.json()) as FinanceSummary & {
+        error?: string;
+      };
+      if (!dashboardResponse.ok || !financeResponse.ok)
+        throw new Error(
+          dashboard.error ??
+            financeData.error ??
+            "Não foi possível atualizar os valores financeiros.",
+        );
+      setCustomerList(dashboard.customers ?? []);
+      setProductList(dashboard.products ?? []);
+      setOrders(dashboard.orders ?? []);
+      setFinance(financeData);
+    } catch (reason) {
+      setOrders((current) =>
+        current.map((item) =>
+          item.id === order.id ? { ...item, payment: previous } : item,
+        ),
+      );
+      throw reason;
+    }
   };
   const updateStatus = (status: OrderStatus) => {
     if (!selectedOrder) return;
@@ -480,6 +530,7 @@ export default function HomePage() {
                   setTab("orders");
                 }}
                 onOpenOrder={setSelectedOrder}
+                onUpdatePayment={updatePayment}
               />
             )}
             {tab === "orders" && (
@@ -492,6 +543,7 @@ export default function HomePage() {
                 filter={filter}
                 setFilter={setFilter}
                 onOpenOrder={setSelectedOrder}
+                onUpdatePayment={updatePayment}
                 onNew={() => {
                   setEditingOrder(null);
                   setShowNew(true);
@@ -593,6 +645,7 @@ function Dashboard({
   onUpdateFinance,
   onOpenOrders,
   onOpenOrder,
+  onUpdatePayment,
 }: {
   counts: Record<string, number>;
   orders: Order[];
@@ -601,6 +654,7 @@ function Dashboard({
   onUpdateFinance: (values: { bank: number; home: number }) => Promise<void>;
   onOpenOrders: (status: OrderStatus | "all") => void;
   onOpenOrder: (order: Order) => void;
+  onUpdatePayment: (order: Order, payment: PaymentStatus) => Promise<void>;
 }) {
   return (
     <>
@@ -654,6 +708,7 @@ function Dashboard({
             order={order}
             customers={customers}
             onClick={() => onOpenOrder(order)}
+            onUpdatePayment={onUpdatePayment}
           />
         ))}
       </div>
@@ -793,6 +848,7 @@ function OrdersView({
   filter,
   setFilter,
   onOpenOrder,
+  onUpdatePayment,
   onNew,
 }: {
   orders: Order[];
@@ -803,6 +859,7 @@ function OrdersView({
   filter: OrderStatus | "all";
   setFilter: (value: OrderStatus | "all") => void;
   onOpenOrder: (order: Order) => void;
+  onUpdatePayment: (order: Order, payment: PaymentStatus) => Promise<void>;
   onNew: () => void;
 }) {
   const count = (status: OrderStatus | "all") =>
@@ -855,6 +912,7 @@ function OrdersView({
               order={order}
               customers={customers}
               onClick={() => onOpenOrder(order)}
+              onUpdatePayment={onUpdatePayment}
             />
           ))
         ) : (
@@ -1307,6 +1365,7 @@ function NewOrderDialog({
     quantities: Record<string, number>;
     delivery: string;
     notes: string;
+    payment: PaymentStatus;
   }) => void | Promise<void>;
   onAddCustomer: (customer: Customer) => Promise<Customer>;
 }) {
@@ -1326,6 +1385,9 @@ function NewOrderDialog({
   const [saveError, setSaveError] = useState("");
   const [delivery, setDelivery] = useState(order?.delivery ?? "");
   const [notes, setNotes] = useState(order?.notes ?? "");
+  const [payment, setPayment] = useState<PaymentStatus>(
+    order?.payment ?? "pending",
+  );
   const filtered = customers.filter((customer) =>
     customer.name.toLowerCase().includes(customerSearch.toLowerCase()),
   );
@@ -1577,8 +1639,7 @@ function NewOrderDialog({
             </div>
           )}
         </FormSection>
-        {!order && (
-          <div className="form-grid">
+        <div className="form-grid">
             <label>
               Entrega
               <input
@@ -1590,13 +1651,19 @@ function NewOrderDialog({
             </label>
             <label>
               Pagamento
-              <select className="input">
-                <option>Pendente</option>
-                <option>Pago</option>
+              <select
+                className="input"
+                value={payment}
+                onChange={(event) =>
+                  setPayment(event.target.value as PaymentStatus)
+                }
+              >
+                <option value="pending">Pendente</option>
+                <option value="paid">Pago</option>
+                <option value="refunded">Reembolsado</option>
               </select>
             </label>
           </div>
-        )}
         <label>
           Notas
           <textarea
@@ -1619,6 +1686,7 @@ function NewOrderDialog({
                 quantities,
                 delivery,
                 notes,
+                payment,
               });
             } catch (reason) {
               setSaveError(
@@ -1912,15 +1980,25 @@ function OrderRow({
   order,
   customers,
   onClick,
+  onUpdatePayment,
 }: {
   order: Order;
   customers: Customer[];
   onClick: () => void;
+  onUpdatePayment: (order: Order, payment: PaymentStatus) => Promise<void>;
 }) {
   const customer =
     customers.find((item) => item.id === order.customerId) ?? customers[0];
   return (
-    <button className="order-row" onClick={onClick}>
+    <div
+      className="order-row"
+      role="button"
+      tabIndex={0}
+      onClick={onClick}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") onClick();
+      }}
+    >
       <ProductThumb productId={order.productIds[0]} />
       <div className="order-number">
         <strong>#{order.id}</strong>
@@ -1930,9 +2008,30 @@ function OrderRow({
         <strong>{customer.name}</strong>
         <StatusBadge status={order.status} />
       </div>
+      <select
+        className={`payment-select payment-${order.payment}`}
+        value={order.payment}
+        aria-label={`Pagamento da encomenda ${order.id}`}
+        onClick={(event) => event.stopPropagation()}
+        onChange={(event) => {
+          event.stopPropagation();
+          void onUpdatePayment(order, event.target.value as PaymentStatus).catch(
+            (reason: unknown) =>
+              window.alert(
+                reason instanceof Error
+                  ? reason.message
+                  : "Não foi possível atualizar o pagamento.",
+              ),
+          );
+        }}
+      >
+        <option value="pending">Pendente</option>
+        <option value="paid">Pago</option>
+        <option value="refunded">Reembolsado</option>
+      </select>
       <span className="order-total">{money(order.total)}</span>
       <ChevronRight className="row-chevron" size={18} />
-    </button>
+    </div>
   );
 }
 function FormSection({
