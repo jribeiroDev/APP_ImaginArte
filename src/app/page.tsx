@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import { Bell, CalendarDays, Check, ChevronLeft, ChevronRight, Copy, Home, Mail, Menu, Moon, Package, Pencil, Phone, Plus, Search, Settings2, ShoppingBag, Truck, UserRound, Users, X } from "lucide-react";
-import { customers as initialCustomers, orders as initialOrders, products as initialProducts, statusMeta, type Customer, type Order, type OrderStatus, type Product } from "@/lib/demo-data";
+import { products as initialProducts, statusMeta, type Customer, type Order, type OrderStatus, type Product } from "@/lib/demo-data";
 
 type Tab = "home" | "orders" | "products" | "more" | "customers";
 const money = (value: number) => new Intl.NumberFormat("pt-PT", { style: "currency", currency: "EUR" }).format(value);
@@ -15,9 +15,11 @@ function ProductThumb({ productId, catalog = initialProducts }: { productId: str
 
 export default function HomePage() {
   const [tab, setTab] = useState<Tab>("home");
-  const [orders, setOrders] = useState<Order[]>(initialOrders);
-  const [customerList, setCustomerList] = useState<Customer[]>(initialCustomers);
-  const [productList, setProductList] = useState<Product[]>(initialProducts);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [customerList, setCustomerList] = useState<Customer[]>([]);
+  const [productList, setProductList] = useState<Product[]>([]);
+  const [dataReady, setDataReady] = useState(false);
+  const [dataError, setDataError] = useState("");
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<OrderStatus | "all">("all");
   const [showNew, setShowNew] = useState(false);
@@ -30,6 +32,20 @@ export default function HomePage() {
   useEffect(() => { const stored = window.localStorage.getItem("imaginarte-theme"); const initialDark = stored ? stored === "dark" : true; queueMicrotask(() => { themeReady.current = true; setDark(initialDark); }); }, []);
   useEffect(() => { if (!themeReady.current) return; document.documentElement.classList.toggle("dark", dark); window.localStorage.setItem("imaginarte-theme", dark ? "dark" : "light"); }, [dark]);
   useEffect(() => { queueMicrotask(() => setAuthenticated(window.localStorage.getItem("imaginarte-auth") === "true")); }, []);
+  useEffect(() => {
+    if (!authenticated) return;
+    let active = true;
+    fetch("/api/dashboard", { cache: "no-store" }).then(async (response) => {
+      const data = await response.json() as { customers?: Customer[]; products?: Product[]; orders?: Order[]; error?: string };
+      if (!response.ok) throw new Error(data.error ?? "Não foi possível carregar os dados.");
+      if (!active) return;
+      setCustomerList(data.customers ?? []);
+      setProductList(data.products ?? []);
+      setOrders(data.orders ?? []);
+      setDataReady(true);
+    }).catch((error: unknown) => { if (active) { setDataError(error instanceof Error ? error.message : "Não foi possível carregar os dados."); setDataReady(true); } });
+    return () => { active = false; };
+  }, [authenticated]);
 
   const visibleOrders = useMemo(() => orders.filter((order) => { const customer = customerList.find((item) => item.id === order.customerId); const product = productList.find((item) => order.productIds.includes(item.id)); const matches = `${order.id} ${customer?.name ?? ""} ${product?.name ?? ""}`.toLowerCase().includes(search.toLowerCase()); return matches && (filter === "all" || order.status === filter); }), [orders, customerList, productList, search, filter]);
   const counts = useMemo(() => ({ new: orders.filter((o) => o.status === "new").length, production: orders.filter((o) => o.status === "production").length, ready: orders.filter((o) => o.status === "ready").length, delivered: orders.filter((o) => o.status === "delivered").length }), [orders]);
@@ -37,13 +53,15 @@ export default function HomePage() {
   const saveOrder = (data: { customerId: string; productIds: string[]; delivery: string; notes: string }) => {
     const total = data.productIds.reduce((sum, id) => sum + (productList.find((product) => product.id === id)?.price ?? 0), 0);
     if (editingOrder) { const updated = { ...editingOrder, ...data, total }; setOrders((current) => current.map((order) => order.id === editingOrder.id ? updated : order)); setSelectedOrder(updated); }
-    else { const newOrder: Order = { id: String(1259 + orders.length - initialOrders.length), ...data, date: "Hoje", status: "new", payment: "pending", total }; setOrders((current) => [newOrder, ...current]); setTab("orders"); }
+    else { const newOrder: Order = { id: String(1259 + orders.length), ...data, date: "Hoje", status: "new", payment: "pending", total }; setOrders((current) => [newOrder, ...current]); setTab("orders"); }
     setEditingOrder(null); setShowNew(false);
   };
-  const updateStatus = (status: OrderStatus) => { if (!selectedOrder) return; const updated = { ...selectedOrder, status }; setOrders((current) => current.map((order) => order.id === updated.id ? updated : order)); setSelectedOrder(updated); };
+  const updateStatus = (status: OrderStatus) => { if (!selectedOrder) return; const updated = { ...selectedOrder, status }; setOrders((current) => current.map((order) => order.id === updated.id ? updated : order)); setSelectedOrder(updated); void fetch("/api/dashboard", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ orderNumber: selectedOrder.id, status }) }); };
 
   if (authenticated === null) return <div className="app-shell auth-loading" />;
   if (!authenticated) return <LoginScreen dark={dark} onLogin={() => { window.localStorage.setItem("imaginarte-auth", "true"); setAuthenticated(true); }} />;
+  if (!dataReady) return <div className="app-shell auth-loading"><p>A carregar dados de produção…</p></div>;
+  if (dataError) return <div className="app-shell auth-loading"><p>{dataError}</p><button className="btn-primary" onClick={() => window.location.reload()}>Tentar novamente</button></div>;
 
   return <div className={dark ? "app-shell dark" : "app-shell"}>
     {tab === "home" && <header className="topbar"><div className="content-wrap topbar-inner"><div className="brand"><Image className="brand-logo" src="/logo.png" alt="Imaginarte" width={166} height={42} priority /></div><button className="icon-btn" aria-label="Alertas"><Bell size={20} /></button></div></header>}
