@@ -90,3 +90,11 @@ CREATE INDEX IF NOT EXISTS sessions_user_id_idx ON sessions(user_id);
 CREATE INDEX IF NOT EXISTS orders_customer_id_idx ON orders(customer_id);
 CREATE INDEX IF NOT EXISTS order_items_order_id_idx ON order_items(order_id);
 CREATE INDEX IF NOT EXISTS order_status_history_order_id_idx ON order_status_history(order_id);
+
+CREATE TABLE IF NOT EXISTS finance_settings (
+  id INTEGER PRIMARY KEY DEFAULT 1,
+  bank_cents INTEGER NOT NULL DEFAULT 0,
+  home_cents INTEGER NOT NULL DEFAULT 0,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT finance_settings_singleton CHECK (id = 1)
+);
