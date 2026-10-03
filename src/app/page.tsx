@@ -1851,13 +1851,7 @@ function OrderDetail({
         </button>
       </div>
       <section className="status-update prominent detail-status-card">
-        <div>
-          <span className="eyebrow">Estado atual</span>
-          {/* <strong>
-            <StatusIcon status={order.status} />{" "}
-            {statusMeta[order.status].label}
-          </strong> */}
-        </div>
+        <span className="eyebrow">Estado atual</span>
         <select
           className="input"
           value={order.status}
@@ -1875,7 +1869,7 @@ function OrderDetail({
       <div className="detail-info-grid">
         <section className="detail-block">
           <h3>
-            <UserRound size={18} /> Informações do cliente
+            <UserRound size={18} /> Cliente
           </h3>
           <p>
             <UserRound size={15} /> <strong>{customer.name}</strong>
@@ -1890,7 +1884,7 @@ function OrderDetail({
         <section className="detail-block address-block">
           <div className="block-heading">
             <h3>
-              <MapPin size={18} /> Morada de entrega
+              <MapPin size={18} /> Morada
             </h3>
             <button
               className={copied ? "icon-btn copied" : "icon-btn"}
@@ -2018,6 +2012,8 @@ function OrderRow({
       </div>
       <div className="order-customer">
         <strong>{customer.name}</strong>
+      </div>
+      <div className="order-status">
         <StatusBadge status={order.status} />
       </div>
       <select
