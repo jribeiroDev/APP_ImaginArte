@@ -182,6 +182,33 @@ export default function HomePage() {
     setFinance((await refreshed.json()) as FinanceSummary);
   };
 
+  const refreshOrderData = async () => {
+    const [dashboardResponse, financeResponse] = await Promise.all([
+      fetch("/api/dashboard", { cache: "no-store" }),
+      fetch("/api/finance", { cache: "no-store" }),
+    ]);
+    const dashboard = (await dashboardResponse.json()) as {
+      customers?: Customer[];
+      products?: Product[];
+      orders?: Order[];
+      error?: string;
+    };
+    const financeData = (await financeResponse.json()) as FinanceSummary & {
+      error?: string;
+    };
+    if (!dashboardResponse.ok || !financeResponse.ok) {
+      throw new Error(
+        dashboard.error ??
+          financeData.error ??
+          "Não foi possível atualizar os dados financeiros.",
+      );
+    }
+    setCustomerList(dashboard.customers ?? []);
+    setProductList(dashboard.products ?? []);
+    setOrders(dashboard.orders ?? []);
+    setFinance(financeData);
+  };
+
   const visibleOrders = useMemo(
     () =>
       orders.filter((order) => {
@@ -222,13 +249,6 @@ export default function HomePage() {
     notes: string;
     payment: PaymentStatus;
   }) => {
-    const total = data.productIds.reduce(
-      (sum, id) =>
-        sum +
-        (productList.find((product) => product.id === id)?.price ?? 0) *
-          (data.quantities[id] ?? 1),
-      0,
-    );
     if (editingOrder) {
       const response = await fetch("/api/orders", {
         method: "PATCH",
@@ -240,21 +260,7 @@ export default function HomePage() {
         throw new Error(
           result.error ?? "Não foi possível guardar as alterações.",
         );
-      const updated = { ...editingOrder, ...data, total };
-      const refreshed = await fetch("/api/dashboard", { cache: "no-store" });
-      const dashboard = (await refreshed.json()) as {
-        customers?: Customer[];
-        products?: Product[];
-        orders?: Order[];
-        error?: string;
-      };
-      if (!refreshed.ok)
-        throw new Error(
-          dashboard.error ?? "Não foi possível atualizar os dados.",
-        );
-      setCustomerList(dashboard.customers ?? []);
-      setProductList(dashboard.products ?? []);
-      setOrders(dashboard.orders ?? [updated]);
+      await refreshOrderData();
       setSelectedOrder(null);
       setTab("orders");
     } else {
@@ -268,15 +274,7 @@ export default function HomePage() {
         throw new Error(
           result.error ?? "Não foi possível guardar a encomenda.",
         );
-      const refreshed = await fetch("/api/dashboard", { cache: "no-store" });
-      const dashboard = (await refreshed.json()) as {
-        customers?: Customer[];
-        products?: Product[];
-        orders?: Order[];
-      };
-      setCustomerList(dashboard.customers ?? []);
-      setProductList(dashboard.products ?? []);
-      setOrders(dashboard.orders ?? []);
+      await refreshOrderData();
       setTab("orders");
     }
     setEditingOrder(null);
@@ -1872,7 +1870,7 @@ function OrderDetail({
         </button>
       </div>
       <section className="status-update prominent detail-status-card">
-        <span className="eyebrow">Estado atual</span>
+        <span>Estado atual</span>
         <select
           className="input"
           value={order.status}
