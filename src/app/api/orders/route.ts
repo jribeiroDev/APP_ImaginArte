@@ -22,7 +22,7 @@ export async function POST(request: Request) {
     if (unavailable) return NextResponse.json({ error: `Stock insuficiente para "${unavailable.name}". Disponível: ${unavailable.stock}.` }, { status: 409 });
     const totalCents = productRows.reduce((sum, product) => sum + product.priceCents * quantities[product.id], 0);
     const lastNumber = await db.select({ value: max(orders.orderNumber) }).from(orders);
-    const orderNumber = (lastNumber[0]?.value ?? 1258) + 1;
+    const orderNumber = (lastNumber[0]?.value ?? 0) + 1;
     const deliveryDate = body.delivery ? new Date(`${body.delivery}T12:00:00`) : null;
     if (deliveryDate && Number.isNaN(deliveryDate.getTime())) return NextResponse.json({ error: "A data de entrega não é válida." }, { status: 400 });
     const payment = body.payment === "paid" || body.payment === "refunded" ? body.payment : "pending";

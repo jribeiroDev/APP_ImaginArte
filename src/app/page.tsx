@@ -195,7 +195,12 @@ export default function HomePage() {
           `${order.id} ${customer?.name ?? ""} ${product?.name ?? ""}`
             .toLowerCase()
             .includes(search.toLowerCase());
-        return matches && (filter === "all" || order.status === filter);
+        return (
+          matches &&
+          (filter === "all"
+            ? order.status !== "delivered"
+            : order.status === filter)
+        );
       }),
     [orders, customerList, productList, search, filter],
   );
@@ -874,7 +879,7 @@ function OrdersView({
 }) {
   const count = (status: OrderStatus | "all") =>
     status === "all"
-      ? allOrders.length
+      ? allOrders.filter((order) => order.status !== "delivered").length
       : allOrders.filter((order) => order.status === status).length;
   return (
     <>
@@ -1573,7 +1578,23 @@ function NewOrderDialog({
                       >
                         −
                       </button>
-                      <strong>{quantities[id] ?? 1}</strong>
+                      <input
+                        className="quantity-input"
+                        type="number"
+                        min={1}
+                        step={1}
+                        value={quantities[id] ?? 1}
+                        onChange={(event) => {
+                          const value = Number(event.target.value);
+                          if (Number.isInteger(value) && value >= 1) {
+                            setQuantities((current) => ({
+                              ...current,
+                              [id]: value,
+                            }));
+                          }
+                        }}
+                        aria-label={`Quantidade de ${product.name}`}
+                      />
                       <button
                         type="button"
                         onClick={() => changeQuantity(id, 1)}

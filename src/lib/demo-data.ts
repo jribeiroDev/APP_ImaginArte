@@ -22,12 +22,12 @@ export const customers: Customer[] = [
 ];
 
 export const orders: Order[] = [
-  { id: "1258", customerId: "c1", productIds: ["p1"], date: "01 Out", delivery: "25 Out", status: "new", payment: "pending", total: 12 },
-  { id: "1257", customerId: "c2", productIds: ["p2"], date: "01 Out", delivery: "18 Out", status: "production", payment: "paid", total: 15 },
-  { id: "1256", customerId: "c3", productIds: ["p2"], date: "01 Out", delivery: "12 Out", status: "ready", payment: "paid", total: 15 },
-  { id: "1255", customerId: "c4", productIds: ["p4"], date: "30 Set", delivery: "30 Set", status: "shipped", payment: "paid", total: 22 },
-  { id: "1254", customerId: "c5", productIds: ["p3"], date: "30 Set", delivery: "22 Out", status: "delivered", payment: "paid", total: 18 },
-  { id: "1253", customerId: "c4", productIds: ["p5"], date: "29 Set", delivery: "29 Set", status: "cancelled", payment: "refunded", total: 9 },
+  { id: "6", customerId: "c1", productIds: ["p1"], date: "01 Out", delivery: "25 Out", status: "new", payment: "pending", total: 12 },
+  { id: "5", customerId: "c2", productIds: ["p2"], date: "01 Out", delivery: "18 Out", status: "production", payment: "paid", total: 15 },
+  { id: "4", customerId: "c3", productIds: ["p2"], date: "01 Out", delivery: "12 Out", status: "ready", payment: "paid", total: 15 },
+  { id: "3", customerId: "c4", productIds: ["p4"], date: "30 Set", delivery: "30 Set", status: "shipped", payment: "paid", total: 22 },
+  { id: "2", customerId: "c5", productIds: ["p3"], date: "30 Set", delivery: "22 Out", status: "delivered", payment: "paid", total: 18 },
+  { id: "1", customerId: "c4", productIds: ["p5"], date: "29 Set", delivery: "29 Set", status: "cancelled", payment: "refunded", total: 9 },
 ];
 
 export const statusMeta: Record<OrderStatus, { label: string; color: string; icon: string }> = {
