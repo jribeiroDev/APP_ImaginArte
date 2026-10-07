@@ -35,7 +35,7 @@ export async function GET() {
       0,
     );
     const missingCents = orderRows
-      .filter((order) => order.payment !== "pending")
+      .filter((order) => order.payment === "pending")
       .reduce((sum, order) => sum + order.totalCents, 0);
     return NextResponse.json({
       bank: settings.bankCents / 100,
