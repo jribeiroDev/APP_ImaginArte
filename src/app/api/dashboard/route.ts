@@ -40,6 +40,7 @@ export async function GET() {
         delivery: formatDate(order.deliveryDate),
         status: order.status,
         payment: order.payment,
+        paidAmount: order.paidCents / 100,
         total: order.totalCents / 100,
         notes: order.notes ?? undefined,
       })),

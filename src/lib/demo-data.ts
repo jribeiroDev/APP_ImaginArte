@@ -1,9 +1,9 @@
 export type OrderStatus = "new" | "production" | "ready" | "shipped" | "delivered" | "cancelled";
-export type PaymentStatus = "pending" | "paid" | "refunded";
+export type PaymentStatus = "pending" | "paid" | "refunded" | "notpaidyet";
 
 export type Product = { id: string; name: string; price: number; category: string; color: string; active: boolean; stock: number };
 export type Customer = { id: string; name: string; phone: string; email: string; city: string; address?: string; postalCode?: string };
-export type Order = { id: string; customerId: string; productIds: string[]; quantities?: Record<string, number>; date: string; delivery: string; status: OrderStatus; payment: PaymentStatus; total: number; notes?: string };
+export type Order = { id: string; customerId: string; productIds: string[]; quantities?: Record<string, number>; date: string; delivery: string; status: OrderStatus; payment: PaymentStatus; paidAmount?: number; total: number; notes?: string };
 
 export const products: Product[] = [
   { id: "p1", name: "Caneca personalizada", price: 12, category: "Canecas", color: "#eaded3", active: true, stock: 0 },

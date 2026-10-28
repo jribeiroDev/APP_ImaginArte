@@ -153,10 +153,10 @@ html.dark .pin-icon { color: #fff; }
 @media (max-width: 640px) { .content-wrap { width: min(100% - 24px, 560px); } }
  .payment-select { min-width: 112px; border: 1px solid var(--border); border-radius: 8px; padding: 6px 8px; background: var(--surface); color: var(--foreground); font-size: 12px; font-weight: 700; cursor: pointer; }
  .payment-select.payment-paid { color: #287453; border-color: #9dccaa; background: #e0f1e4; }
- .payment-select.payment-pending { color: #906717; border-color: #e7c971; background: #fff0c8; }
+ .payment-select.payment-pending, .payment-select.payment-notpaidyet { color: #906717; border-color: #e7c971; background: #fff0c8; }
  .payment-select.payment-refunded { color: #6d7479; border-color: #c7ccce; background: #e7e9e9; }
  html.dark .payment-select.payment-paid { color: #c2efd7; border-color: #3c8b68; background: #1d4939; }
- html.dark .payment-select.payment-pending { color: #ffe4a0; border-color: #9c7a2b; background: #4d4026; }
+ html.dark .payment-select.payment-pending, html.dark .payment-select.payment-notpaidyet { color: #ffe4a0; border-color: #9c7a2b; background: #4d4026; }
  html.dark .payment-select.payment-refunded { color: #d4dcda; border-color: #68746f; background: #303b37; }
  @media (max-width: 720px) { .order-row { grid-template-columns: 45px 55px 1fr auto 18px; gap: 9px; padding-inline: 11px; }.payment-select { min-width: 0; width: 92px; padding-inline: 5px; }.order-total { display: none; }.row-chevron { grid-column: 5; } }
  @media (max-width: 720px) { .detail-info-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 9px; }.detail-info-grid .detail-block { min-width: 0; padding: 12px; margin-top: 12px; }.detail-info-grid .detail-block h3 { font-size: 13px; gap: 5px; }.detail-info-grid .detail-block h3 svg { width: 16px; height: 16px; }.detail-info-grid .detail-block p { gap: 4px; margin-top: 7px; font-size: 11px; overflow-wrap: anywhere; }.detail-info-grid .detail-block p svg { width: 14px; height: 14px; flex: 0 0 auto; }.detail-info-grid .address-block .block-heading { align-items: flex-start; }.detail-info-grid .address-block .icon-btn { width: 28px; height: 28px; flex: 0 0 auto; } }

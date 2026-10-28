@@ -27,16 +27,15 @@ export async function GET() {
     const [settings, orderRows] = await Promise.all([
       getSettings(),
       db
-        .select({ totalCents: orders.totalCents, payment: orders.payment })
+        .select({ totalCents: orders.totalCents, paidCents: orders.paidCents, payment: orders.payment })
         .from(orders),
     ]);
     const ordersTotalCents = orderRows.reduce(
       (sum, order) => sum + order.totalCents,
       0,
     );
-    const missingCents = orderRows
-      .filter((order) => order.payment === "pending")
-      .reduce((sum, order) => sum + order.totalCents, 0);
+    const missingCents = orderRows.reduce((sum, order) =>
+      sum + (order.payment === "pending" || order.payment === "notpaidyet" ? order.totalCents - order.paidCents : 0), 0);
     return NextResponse.json({
       bank: settings.bankCents / 100,
       home: settings.homeCents / 100,

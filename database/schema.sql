@@ -16,6 +16,8 @@ EXCEPTION
   WHEN duplicate_object THEN NULL;
 END $$;
 
+ALTER TYPE payment_status ADD VALUE IF NOT EXISTS 'notpaidyet';
+
 CREATE TABLE IF NOT EXISTS users (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   email TEXT NOT NULL UNIQUE,
@@ -58,6 +60,7 @@ CREATE TABLE IF NOT EXISTS orders (
   customer_id UUID NOT NULL REFERENCES customers(id),
   status order_status NOT NULL DEFAULT 'new',
   payment payment_status NOT NULL DEFAULT 'pending',
+  paid_cents INTEGER NOT NULL DEFAULT 0,
   order_date TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   delivery_date TIMESTAMPTZ,
   shipping_method TEXT,
@@ -67,6 +70,8 @@ CREATE TABLE IF NOT EXISTS orders (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS paid_cents INTEGER NOT NULL DEFAULT 0;
 
 CREATE TABLE IF NOT EXISTS order_items (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

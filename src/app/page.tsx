@@ -248,6 +248,7 @@ export default function HomePage() {
     delivery: string;
     notes: string;
     payment: PaymentStatus;
+    paidAmount?: number;
   }) => {
     if (editingOrder) {
       const response = await fetch("/api/orders", {
@@ -281,17 +282,26 @@ export default function HomePage() {
     setShowNew(false);
   };
   const updatePayment = async (order: Order, payment: PaymentStatus) => {
-    const previous = order.payment;
+    const enteredAmount = payment === "notpaidyet"
+      ? window.prompt(
+          "Valor já pago (€)",
+          order.payment === "notpaidyet" ? String(order.paidAmount ?? "") : "",
+        )
+      : null;
+    if (payment === "notpaidyet" && enteredAmount === null) return;
+    const paidAmount = payment === "notpaidyet"
+      ? Number(enteredAmount?.replace(",", "."))
+      : undefined;
     setOrders((current) =>
       current.map((item) =>
-        item.id === order.id ? { ...item, payment } : item,
+        item.id === order.id ? { ...item, payment, paidAmount } : item,
       ),
     );
     try {
       const response = await fetch("/api/orders", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ orderNumber: order.id, payment }),
+        body: JSON.stringify({ orderNumber: order.id, payment, paidAmount }),
       });
       const result = (await response.json()) as { error?: string };
       if (!response.ok)
@@ -324,7 +334,7 @@ export default function HomePage() {
     } catch (reason) {
       setOrders((current) =>
         current.map((item) =>
-          item.id === order.id ? { ...item, payment: previous } : item,
+          item.id === order.id ? order : item,
         ),
       );
       throw reason;
@@ -1379,6 +1389,7 @@ function NewOrderDialog({
     delivery: string;
     notes: string;
     payment: PaymentStatus;
+    paidAmount?: number;
   }) => void | Promise<void>;
   onAddCustomer: (customer: Customer) => Promise<Customer>;
 }) {
@@ -1400,6 +1411,9 @@ function NewOrderDialog({
   const [notes, setNotes] = useState(order?.notes ?? "");
   const [payment, setPayment] = useState<PaymentStatus>(
     order?.payment ?? "pending",
+  );
+  const [paidAmount, setPaidAmount] = useState(
+    order?.paidAmount ? String(order.paidAmount) : "",
   );
   const filtered = customers.filter((customer) =>
     customer.name.toLowerCase().includes(customerSearch.toLowerCase()),
@@ -1694,6 +1708,19 @@ function NewOrderDialog({
             </select>
           </label>
         </div>
+        {payment === "notpaidyet" && (
+          <label>
+            Valor já pago (€)
+            <input
+              type="number"
+              min="0.01"
+              step="0.01"
+              className="input"
+              value={paidAmount}
+              onChange={(event) => setPaidAmount(event.target.value)}
+            />
+          </label>
+        )}
         <label>
           Notas
           <textarea
@@ -1717,6 +1744,8 @@ function NewOrderDialog({
                 delivery,
                 notes,
                 payment,
+                paidAmount:
+                  payment === "notpaidyet" ? Number(paidAmount) : undefined,
               });
             } catch (reason) {
               setSaveError(
@@ -1950,6 +1979,18 @@ function OrderDetail({
           <strong>Total</strong>
           <strong>{money(order.total)}</strong>
         </div>
+        {order.payment === "notpaidyet" && (
+          <>
+            <div className="detail-total">
+              <span>Já pago</span>
+              <span>{money(order.paidAmount ?? 0)}</span>
+            </div>
+            <div className="detail-total">
+              <strong>Falta pagar</strong>
+              <strong>{money(order.total - (order.paidAmount ?? 0))}</strong>
+            </div>
+          </>
+        )}
       </section>
     </div>
   );
