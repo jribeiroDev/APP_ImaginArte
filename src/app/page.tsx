@@ -2058,6 +2058,7 @@ function OrderRow({
         <option value="pending">Pendente</option>
         <option value="paid">Pago</option>
         <option value="refunded">Reembolsado</option>
+        <option value="refunded">Não pago na totalidade</option>
       </select>
       <span className="order-total">{money(order.total)}</span>
       <ChevronRight className="row-chevron" size={18} />
